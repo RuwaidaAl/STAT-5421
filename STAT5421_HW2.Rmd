@@ -1,0 +1,202 @@
+---
+title: "HW2"
+author: "Ruwiada Al Harrasi"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+##2-1
+Agresti, problem 1.10. Calculate both likelihood ratio and Pearson chi-square test statistics and the corresponding P-values. For the former, use 0⋅log(0)=0 , which makes sense because xlog(x)→0 as x→0 Should we expect good asymptotic approximation here?
+likelihood ratio= 2 * (x * log(pi.hat / pi) + (n - x) * log((1 - pi.hat) / (1 - pi)))
+chi-square test statistics= sum((bar - moo)^2 / moo)
+
+
+```{r}
+# Create the data frame
+df <- data.frame(
+  Deathn = c(0, 1, 2, 3, 4),
+  Cropsn = c(109, 65, 22, 3, 1)
+)
+# Initialize an empty vector to store the products
+fx<- numeric(length(df$Deathn))
+
+# Loop through the rows and calculate the products
+for (i in 1:nrow(df)) {
+  fx[i] <- df$Deathn[i] * df$Cropsn[i]
+}
+
+lambda <- sum(fx) / sum(df$Cropsn)
+new= c(0.5433508691, 0.3314440301, 0.1010904292, 0.0205550539 ,(0.0031346457+ 0.0004249719))
+new
+E= new*sum(df$Cropsn)
+LK=  2 * sum(df$Cropsn * log(df$Cropsn/E))
+chi_square= sum((df$Cropsn - E)^2 / E)
+1 - pchisq(LK, 4)
+1 - pchisq(chi_square, 4)
+
+
+```
+
+The p-values i obtained from the likelihood ratio test and the Pearson chi-square test are very close to 1 (0.9615013 and 0.9630716, respectively). Large p-values suggest that there is no strong evidence to reject the null hypothesis, indicating that the observed data is consistent with the expected distribution. This supports the idea that the Poisson distribution is a good fit our data.We expect good asymptotic approximation as 0.9615013 is very close to  0.9630716.
+
+
+##2-1 
+What are the Wilks, Rao, and Wald two-tailed tests for testing H0:μ=μ0 versus H1:μ≠μ0? Does it make a difference whether observed or expected Fisher information is used? If it does, give both forms. Apply these to do the hypothesis test for data x=123 and null hypothesis μ0=100. (If observed or expected Fisher information makes a difference, there may be 5 tests. If not, 3 tests. If it makes a difference for one but not the other, 4 tests.)
+$$l(μ)=xlog(μ)−μ,$$
+$$MLE:  μ̂ =x$$
+Observed Fisher information: $$ J(μ_0)=x/μ^2$$
+Expected Fisher information: $$I(μ_0)=1/μ$$
+$$R1 = \frac{{l\left(\frac{x}{\mu_0} - 1\right)^2}}{{I(\mu_0)}}$$
+$$R2 = \frac{{l\left(\frac{x}{\mu_0} - 1\right)^2}}{{J(\mu_0)}}$$
+
+
+```{r}
+#Roa
+mu.zero <- 100
+x=123
+mu.hat <- x
+obs= x/(mu.zero)^2
+exp= 1/ mu.zero
+r1= ((x/mu.zero)-1)^2/(obs)
+r1
+p1=pchisq(r1,1,lower.tail = F)
+p1
+r2= ((x/mu.zero)-1)^2/(exp)
+r2
+p2=pchisq(r2,1,lower.tail = F)
+p2
+```
+After plugging in the Maximum Likelihood Estimator (MLE), the observed Fisher information is  4.300813, and the expected Fisher information is 5.29;which are diffrent. The p-value for the observed Fisher information is 0.03809416, and the p-value for the expected Fisher information is 0.02144822. There are both less than 0.05, we  to reject the null hypothesis. This indicates that we have enough evidence to conclude that μ != μ0.
+$$Tn=2[ln(θ̂ n)−ln(θ̃ n)]$$
+$$2[(xlog(μ)−μ) -(xlog(μ_0)−μ)]$$
+```{r}
+#wilks
+w= 2*((x*log(mu.hat) -mu.hat) - (x*log(mu.zero) -mu.zero))
+w
+p=pchisq(w,1,lower.tail = F)
+p
+```
+The p_value for observed and expected Fisher information is 0.02646336 and this p-value is less than 0.05,we reject the null hypothesis because the p-value is less than 0.05 so have enough evidence to reject the null hypothesis.
+$$g(μ)= μ-μ_0$$
+$$Wn=(g(μ))^2.I(\hat{\mu}))$$
+```{r}
+#Wald
+wn= ((mu.hat-mu.zero)^2)*(1/mu.hat)
+wn
+p=pchisq(wn,1,lower.tail = F)
+p
+wn= ((mu.hat-mu.zero)^2)*(x/mu.hat^2)
+wn
+p=pchisq(wn,1,lower.tail = F)
+p
+```
+After plugging in the Maximum Likelihood Estimator (MLE), the observed and expected Fisher information is typically the same 4.300813. The p_value for observed and expected Fisher information is 0.03809416 and this p-value is less than 0.05, we to reject the null hypothesis. This suggests that we have enough evidence to reject the null hypothesis.
+
+##2-3
+What are the confidence intervals obtained by inverting each of the tests found in the 2.2? Apply them to the same data as in 2.2. Do 95% confidence intervals
+
+```{r}
+conf.level=.95
+#Score Interval (also called Rao)
+z <- qnorm((1 + conf.level) / 2)
+x + z^2 / 2 + c(-1, 1) * z * sqrt(x + z^2 / 4)
+```
+we 95% confident that the mu would fall between this interval 103.0990 146.7425 by using Rao test.
+```{r}
+#Likelihood Interval (also called Wilks)
+logl=function(mu) {
+    result <- x * log(mu) - mu
+    result[is.nan(result)] <-  (- mu)
+    return(result)
+}
+
+crit <- qchisq(conf.level, df = 1)
+fred <- function(mu) 2 * (logl(mu.hat) - logl(mu)) - crit
+tol <- sqrt(.Machine$double.eps)
+if (mu.hat == 0) {
+    low <- 0
+} else {
+    low <- uniroot(fred, lower = 0, upper = mu.hat, tol = tol)$root
+}
+hig <- uniroot(fred, lower = mu.hat, upper = 2 * mu.hat,
+    extendInt = "upX", tol = tol)$root
+c(low, hig)
+```
+we 95% confident that the mu would fall between this interval 102.5241 146.0360 by using Wilks test.
+```{r}
+#Wald Confidence Interval
+mu.hat + c(-1, 1) * qnorm((1 + conf.level) / 2) * sqrt(mu.hat)
+
+```
+we 95% confident that the mu would fall between this interval 101.2629 144.7371 by using Wald test.
+
+
+##2-4
+a.Perform this Wald test on the data http://www.stat.umn.edu/geyer/5421/mydata/hw2-4.txt For the g function in the the definition of the Wald test use g(μ,ν)=ν−μ. What does the test say about whether the data are Poisson or negative binomial?
+```{r}
+
+foo <- read.table(
+    url("http://www.stat.umn.edu/geyer/5421/mydata/hw2-4.txt"),
+    header = TRUE)
+
+mlogl <- function(theta) {
+    stopifnot(is.numeric(theta))
+    stopifnot(is.finite(theta))
+    stopifnot(length(theta) == 2)
+    alpha <- theta[1]
+    beta <- theta[2]
+    gamma <- 1 - alpha - beta
+    sum(-dnbinom(foo$x, alpha ^2/(beta - alpha ), alpha /beta, log=T))
+}
+```
+
+```{r}
+theta.start <- c(mean(foo$x),var(foo$x))
+theta.start
+nout =nlm(mlogl,theta.start,hessian =TRUE)
+nout$estimate
+nout$code <=2
+nout$hessian
+ 
+```
+
+
+$$W′n=(θ̂ n−θ)TJn(θ̂ n)(θ̂ n−θ)$$
+
+
+```{r}
+nu= nout$estimate[2]
+mu= nout$estimate[1]
+
+# Calculate the Wald test statistic
+gamma=nu-mu
+w = (gamma)*solve(t(c(-1,1))%*%solve(nout$hessian)%*%c(-1,1))*gamma
+w
+p= (pchisq(w,1, lower.tail = F)/2)
+p
+```
+
+The p value is 0.06455446 which is greater than .05. The alternative hypothesis is that var greater than mean and here we fail to reject the null hypothesis that mean = variance which means data significantly deviates from a Poisson distribution.
+
+Assuming the likelihood ratio test is OK (even though we are not sure about this), also perform a likelihood ratio test (also one-sided) and interpret that. Compare with the Wald test. Does it look like these may be asymptotically equivalent in this situation?
+
+$$    2[l(θ̂ )−l(θ)]      $$
+```{r}
+
+theta= nout$minimum
+mlogl2 <- function(theta)
+{  stopifnot(is.numeric(theta))
+    stopifnot(is.finite(theta))
+    stopifnot(length(theta) == 1)
+    sum(- dpois(foo$x,theta, log = TRUE))
+}
+nout2= nlm(mlogl2,median(foo$x),hessian =TRUE)
+theta.hat= nout2$minimum
+lrt= 2 * ( theta.hat- theta)
+lrt
+p= (pchisq(lrt,1, lower.tail = F)/2)
+p
+
+```
+The p-value of 0.02408894, obtained from the likelihood ratio test (LRT), is less than the 0.05 significance level.The p-value from the LRT (0.02408894) is smaller than the p-value from the Wald Test (0.06455446).The Wald test statistic is asymptotically equivalent to the Wilks test statistic as Both Tn−Wn and Tn−W′n converge in distribution to zero as n goes to infinity. however here our sample size is 50 which is finite and The fact that the negative binomial and Poisson distributions do not satisfy the "usual regularity conditions" for MLE, Wald, Wilks, and Rao tests can certainly contribute to why they may not be asymptotically equivalent in certain situations. Asymptotic equivalence typically relies on the fulfillment of certain assumptions and conditions, and when these conditions are not met, it can lead to differences between the tests.

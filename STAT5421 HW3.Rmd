@@ -1,0 +1,167 @@
+---
+title: "STAT5421_HW3"
+author: "Ruwiada Al Harrasi"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+###3.1
+#a
+```{r}
+set.seed(5421)
+library(CatDataAnalysis)
+data(table_4.3)
+names(table_4.3)
+sapply(table_4.3, class)
+table_4.3$color= as.factor(table_4.3$color)
+table_4.3$spine= as.factor(table_4.3$spine)
+sapply(table_4.3, class)
+
+```
+
+
+```{r}
+set.seed(5421)
+#Test whether any of the terms in the model can be dropped. use any one of Wald, Wilks, Rao for all the tests, your choice. (Do not do more than one of these. Pick one and use it.) Report the P-value for each test. What model do these tests suggest we use?
+gout <- glm(satell ~width+weight+color+spine, poisson, data= table_4.3)
+gout3=drop1(gout, test = "LRT")
+summary(gout)
+#Do a Poisson regression of satell
+gout1 <- glm(satell ~weight+color , family = poisson(link = "log") , data= table_4.3)
+summary(gout1)
+
+```
+
+#b
+
+```{r}
+set.seed(5421)
+anova(gout, gout1, test = "LRT")
+
+```
+The p value is greater than 0.05 which means we will reject the second model and use the 1st model. The second model suggest that the only two significant variables are weight + color.
+
+###3.2
+
+```{r}
+library(MCM)
+library(KernSmooth)
+```
+#a
+```{r}
+set.seed(5421)
+gout1=glm(satell ~ 0+ weight+color , family = poisson , data= table_4.3, x=T)
+modmat <- gout1$x
+response <- gout1$y
+summary(gout1)
+```
+
+```{r}
+set.seed(5421)
+library("mcmc")
+library("KernSmooth")
+y <- mean(gout1$y)
+logl <- function(beta) {
+logll= (sum(y * beta - exp(beta)))
+ return(logll)
+ }
+
+# Define log unnormalized prior function for Poisson regression
+log.unnormalized.prior <- function(beta) {
+  stopifnot(is.numeric(beta))
+  stopifnot(is.finite(beta))
+  stopifnot(length(beta) == ncol(modmat))
+  log_prior <- (sum((0.5 * beta)) - sum(0.5 * exp(beta)))
+  return(log_prior)
+}
+
+log.unnormalized.posterior = function(beta) logl(beta)+ log.unnormalized.prior(beta)
+```
+
+```{r}
+set.seed(5421)
+# Run Metropolis-Hastings sampling
+mout <- metrop(log.unnormalized.posterior, rep(0, ncol(modmat)),
+    nbatch = 1000000,blen = 1)
+mout$accept
+mout$time
+colnames(mout$batch) <- names(gout1$coefficients)
+foo <- as.ts(mout$batch)
+colMeans(foo)
+apply(foo, 2, sd) / sqrt(mout$nbatch)
+
+```
+the running time when nbatch = 1000 is 69.061  and the accepetance .102. and the Se are relativly low .01
+```{r}
+set.seed(5421)
+foo <- sqrt(diag(var(mout$batch)))
+mout <- metrop(mout, scale = foo)
+mout$accept
+mout$time
+colnames(mout$batch) <- names(gout1$coefficients)
+foo <- as.ts(mout$batch)
+apply(foo, 2, sd) / sqrt(mout$nbatch)
+
+```
+
+```{r}
+set.seed(5421)
+mout <- metrop(mout, nbatch = 1000000)
+mout$accept
+t.test(mout$accept.batch)$conf.int
+colnames(mout$batch) <- names(gout1$coefficients)
+foo <- as.ts(mout$batch)
+mean(mout$batch)
+apply(foo, 2, sd) / sqrt(mout$nbatch)
+mout$time
+```
+when I changed the nbatch to 10000000 the running time become more than a minute.
+
+#b
+```{r}
+set.seed(5421)
+foo <- sqrt(diag(var(mout$batch)))
+mout <- metrop(mout, scale = foo)
+mout$accept
+mout$time
+colnames(mout$batch) <- names(gout1$coefficients)
+foo <- as.ts(mout$batch)
+apply(foo, 2, sd) / sqrt(mout$nbatch)
+
+```
+
+when we have the scale as sqrt(diag(var(mout$batch))) Monte Carlo standard errors doesn't change much but the acceptance rate got higher
+```{r}
+set.seed(5421)
+mout <- metrop(mout, scale=.0002 )
+mout$accept
+t.test(mout$accept.batch)$conf.int
+colnames(mout$batch) <- names(gout1$coefficients)
+foo <- as.ts(mout$batch)
+apply(foo, 2, sd) / sqrt(mout$nbatch)
+mout$time
+
+```
+When changing the scale to .0002 with a very good acceptance Monte Carlo standard errors to be less than 0.001. with acceptance rate .99 and the running time doesn't seem to change a lot but it lloks higher than using sqrt(diag(var(mout$batch))) as a scaler.
+#c
+```{r}
+set.seed(5421)
+mout <- metrop(log.unnormalized.posterior, rep(0, ncol(modmat)),
+    nbatch = 10000, blen = 1)
+colnames(mout$batch) <- names(gout1$coefficients)
+nu1 <- mout$batch[,"weight"]
+idx.sub <- seq(1, length(nu1), by = 500)
+nu1.sub <- nu1[idx.sub]
+bw <- dpik(nu1.sub)
+den <- bkde(nu1, bandwidth = bw)
+
+# Set x-axis limits from -2 to 2
+plot(den, type = "l", xlab = "weight", ylab = "probability density",ylim = c(0, 1))
+
+
+```
+
+We can seee that we have a normal distrebution with a mean close to 1.
+

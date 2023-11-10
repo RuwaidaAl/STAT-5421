@@ -1,0 +1,299 @@
+---
+title: "STAT 5421"
+author: "Ruwiada Al Harrasi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+Problems 1, 2, 3, 6, 7, 8, 9 of Chapter 1
+
+Q1:
+
+A. nominal 
+B. ordinal
+C. interval 
+D. nominal 
+E. ordinal
+F. nominal
+
+Q2:
+Each of 100 multiple-choice questions on an exam has four possible answers, one
+of which is correct. For each question, a student guesses by selecting an answer
+randomly.
+a. Specity the distribution of the number of correct answers.
+Binomial distribution
+$$(X \sim \text{Binomial}(n = 100, p = \frac{1}{4})$$
+
+b. Find the mean and standard deviation of that distribution. Would it be surprising
+if the student made at least 50 correct responses? Why?
+```{r}
+n = 100
+pi_hat =1/4
+pi= .5
+
+mean= n *pi_hat
+mean
+sd= sqrt(mean*(1-pi_hat))
+sd
+# Calculate the Z-score
+z_score <- (pi - pi_hat) / sqrt((pi_hat * (1 - pi_hat)) / n)
+z_score
+# Calculate the P-value
+p_value <- 2 * (1 - pnorm(abs(z_score)))
+p_value
+```
+The p value 7.764037e-09 is very small (samller than .05) which indicates that is extremely unlikely to have a student made at least 50 correct responses by random chance alone.
+
+c. Specify the distribution of (n1, n2, 13, n4), where n; is the number of times the
+student picked choice j.
+ multinomial distribution 
+$$(n_1, n_2, n_3, n_4) \sim \text{Multinomial}(n = 100, p = (0.25, 0.25, 0.25, 0.25))$$
+
+d. Find E(nj) and var(n;). Show that cov(nj, nk) =
+-6.25 and corr(n j, nk) :
+-0.333. 
+```{r}
+n = 100
+p =1/4
+#mean
+mean= n*p
+mean
+#variances
+var= mean*(1-p)
+var
+#covariance
+cov= -n * p * p
+cov
+#correlation
+cor=  cov / sqrt(var * var)
+cor 
+```
+
+Q3: An experiment studies the number of insects that survive a certain dose of an
+insecticide, using several batches of insects of size n each. The insects are sensitive to factors that vary among batches during the experiment but were not measured,such as temperature level. Explain why the distribution of the number of insects per batch surviving the experiment might show overdispersion relative to a bin(n, I) distribution.
+
+Overdispersion in this experiment arises because unmeasured factors, like temperature variations among batches, introduce additional variability in the number of surviving insects per batch. This variability affects both the mean and the variance of the response variable, deviating from the assumptions of a standard binomial distribution (bin(n, p)). This happens because these unmeasured factors impact survival rates but are not considered in the binomial model, leading to batch-to-batch variations in insect survival. We deviate from the usual assumptions of independence and constant success probability in a Binomial distribution. Consequently, modeling the data with Binomial (n, π) distribution might reveal signs of relative overdispersion.
+
+1.6 In a crossover trial comparing a new drug to a standard, π denotes the probability Refer to the vegetarianism example in Section 1.4.3. For testing Ho: 7 = 0.50 against Ha: 7 ‡ 0.50, n=25, non random show that:
+
+a. The likelihood-ratio statistic equals 2[25 log(25/12.5)] = 34.7.
+$$-2[L_0- L_\pi] = 2[ ylog\frac{\hat\pi}{\pi_0}+ (n-y)log\frac{1-\hat\pi}{1-\pi_0}]$$
+$$ L[\hat\pi]=  L[0]=0$$
+$$ L[\pi]= \pi_0(1- \pi)^{25} = (1- \pi)^{25}$$
+$$-2[L_0- L_\pi] = -2[ l(\pi_0) - l(\hat\pi)]$$
+$$2((n-x)\log\left(\frac{n-x}{n-np}\right))$$
+
+```{r}
+#a
+
+pi_hat=.5
+n=25
+x=0
+lk= 2*((n-x)*log((n-x)/(n-n*pi_hat)))
+round(lk,1)
+```
+
+
+b. The chi-squared form of the score statistic equals 25.0.
+```{r}
+# Given values
+observed_count <- 0
+
+# Calculate the expected count under the null hypothesis
+expected_count <- 25
+
+# Calculate the chi-squared statistic
+chi_squared <- ((observed_count - expected_count)^2) / expected_count
+
+# Print the result
+print(chi_squared)
+
+```
+
+c. The Wald z or chi-squared statistic is infinite.
+
+```{r}
+wald= (pi_hat-pi)/sqrt((pi_hat*(1-pi_hat)/n))
+wald
+```
+
+```{r}
+library(binom)
+```
+1.7 In a crossover trial comparing a new drug to a standard, r denotes the probability
+that the new one is judged better. It is desired to estimate a and test Ho: r = 0.50
+against Ha: 7 ‡ 0.50. In 20 independent observations, the new drug is better each
+time.
+
+a. Find and sketch the likelihood function. Is it close to the quadratic shape that
+large-sample normal approximations utilize?
+$$ L(r) = \left( \frac{x}{n} \right) r^x (1-r)^{n-x} $$
+$$ L(r) = \left( \frac{20}{20} \right) r^{20} (1-r)^{20-20} $$
+$$ L(r) = r^{20}$$
+```{r}
+x=20
+n=20
+pi = seq(0,1,by=0.001)
+Likelihood= pi^x*(1-pi)^(n-x)
+plot(pi, Likelihood, type = 'l',
+     ylab = 'Likelihood',xlab = expression(pi),
+     main='Likelihood values for different values of pi')
+
+
+```
+
+
+From the graph we can see that as $\pi$ goes from 0 to 1 The Likelihood increases and when $\pi$ gets to $infty$ r =1 which means the new drug preforms better.
+
+
+b. Give the ML estimate of r. Conduct a Wald test and construct a 95% Wald
+confidence interval for r. Are these sensible?
+$$\hat{\pi} \pm Z_{1-\frac{\alpha}{2}} \sqrt{\frac{\hat{\pi}(1-\hat{\pi})}{n}}$$
+
+```{r}
+n=20
+pi=0.5
+pi_hat=1
+alpha = 0.05
+se= sqrt((pi_hat*(1-pi_hat)/n))
+z_score=(qnorm(1- alpha/2))
+# Calculate the Wald interval
+wald_lower <- pi_hat - z_score * se
+wald_upper <- pi_hat + z_score * se
+
+# Print the Wald interval
+cat("Wald Interval:", wald_lower, "to", wald_upper, "\n")
+
+
+```
+The Wald Interval would be [`r wald_lower`, `r wald_upper`]. This is not a sensible CI becuase it has only one value and there is no information about r.
+c. Conduct a score test, reporting the P-value. Construct a 95% score confidence
+interval. Interpret.
+
+```{r}
+# Given values
+pi.hat <- 1.0  # Sample proportion
+n <- 20         # Sample size
+pi <- 0.5      # Null hypothesis proportion
+crit=20
+# Calculate the test statistic (score)
+score <- (pi.hat - pi) / sqrt(pi * (1 - pi) / n)
+score
+# Calculate the p-value (two-tailed)
+p <- 2 * pnorm(-abs(score))
+p
+# Calculate 95 percent confidence interval
+confidence_interval=prop.test(20, 20, conf.level = .95, correct = FALSE)$conf.int
+
+```
+The score statistics is  `r score`  and the p value is `r p` whcih is less than .05 We are 95% confident, that the true value of probability r falls between approximately [`r confidence_interval`.]
+
+d. Conduct a likelihood-ratio test and construct a likelihood-based 95% confidence
+interval. Interpret.
+```{r}
+x=20
+pi=0.5
+pi_hat=1
+# Calculate the LikeLihood ratio test statistic
+LR <-  2* x * log(pi_hat / pi)
+LR
+# two-tailed hypothesis test
+p=  pchisq(LR, df = 1, lower.tail = F)
+p
+# Calculate the confidence interval for LR
+confidence_interval <- c( exp(-(1.96^2)/(x+n)),1)
+confidence_interval
+
+```
+
+From the liklihood test statitics when the p value is `r p`  which is less than .05 we are 95% confident than the probablilty would fall within this intravel [`r confidence_interval` ]
+
+e. Construct an exact binomial test. Interpret.
+
+```{r}
+binom.test(x,n,p =.5, alternative = "two.sided")
+CI= binom.test(x,n,p =.5, alternative = "two.sided")$conf.int
+```
+From predorming binomail test with a p value 1.907e-06 which is less than .05 we are 95% confident that the it would fall withtin this interval 0.8315665 1.0000000.
+
+
+1.8 Refer to the previous exercise. Suppose you wanted a large enough sample to estimate the probability of preferring the new drug to within 0.05, with confidence 0.95. If the true probability is 0.80, about how large a sample is needed?
+
+```{r}
+cl=.95
+p=.80
+moe= .05
+# Calculate the critical value (Z) for the given confidence level
+z <- qnorm((1 + cl) / 2)
+n= ((z)^2*p*(1-p))/(moe)^2
+n=round(n)
+
+```
+based on the result the researchers will need at least `r n`  participent in the smaple.
+
+1.9 In an experiment on chlorophyll inheritance in maize, for 1103 seedlings of self-fertilized heterozygous green plants, 854 seedlings were green and 249 were yellow.Theory predicts the ratio of green to yellow is 3:1. Test the hypothesis that 3:1 is the true ratio. Report the P-value, and interpret.
+```{r}
+n=1103
+Obs= c(249,854)
+Exp= c(.25*n, .75*n)
+
+chi_test= sum((Obs-Exp)^2/ Exp)
+chi_test
+df= length(Obs)-1
+# Calculate the p-value
+p_value <- 1 - pchisq(chi_test, df)
+p_value
+```
+
+the p value `r p_value` is greater than .05 which suggests that we fail to reject that the ratio of green  to yellow is 3:1.
+
+
+10. For the vegetarian data, Example 1.6.4 in Agesti, do a Bayesian analysis using a uniform (flat) prior on the proportion of vegetarians.
+
+Plot the posterior distribution
+
+```{r}
+# Define the data
+x = 0 # Number of vegetarians
+n = 25 # Total number of observations
+pi = seq(0, 1, by = 0.01) # Values of pi for the posterior plot
+
+# Define the uniform prior (flat prior)
+alpha1 <- 1
+alpha2 <- 1
+
+# Calculate the posterior distribution
+posterior <- dbeta(pi, x + alpha1, n - x + alpha2)
+
+# Plot the posterior distribution
+plot(pi, posterior, type = "l",
+     xlab = expression(pi), ylab = "Probability Density",
+     main = "Posterior Distribution with Uniform Prior")
+
+
+```
+
+Find the posterior mean
+```{r}
+# Update hyperparameters based on the observed data
+alpha1 = alpha1 + x
+alpha2 = alpha2 + n - x
+
+mean= alpha1 / (alpha1 + alpha2)
+mean
+```
+
+Find the posterior median
+```{r}
+
+# posterior median
+median= qbeta(0.5, alpha1, alpha2)
+median
+```
+
+Find the posterior mode
+```{r}
+# posterior mode
+mode=((alpha1 - 1) / (alpha1 + alpha2 - 2)) |> max(0) |> min(1)
+mode
+```
+
